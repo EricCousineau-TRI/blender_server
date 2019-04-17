@@ -48,7 +48,7 @@ from pydrake.systems.meshcat_visualizer import MeshcatVisualizer
 from pydrake.systems.primitives import FirstOrderLowPassFilter
 from pydrake.util.eigen_geometry import Isometry3
 
-from blender_server.drake_blender_visualizer.blender_visualizer import BlenderCamera
+from blender_server.drake_blender_visualizer.blender_visualizer import BlenderColorCamera
 
 
 def RegisterVisualAndCollisionGeometry(
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
         offset_quat_base = RollPitchYaw(0., 0., 0.).ToQuaternion().wxyz()
         os.system("mkdir -p /tmp/ycb_scene_%03d" % scene_k)
-        blender_cam = builder.AddSystem(BlenderCamera(
+        blender_cam = builder.AddSystem(BlenderColorCamera(
             scene_graph,
             draw_period=0.03333/2.,
             camera_tfs=cam_tfs,
