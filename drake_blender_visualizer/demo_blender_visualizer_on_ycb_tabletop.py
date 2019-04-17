@@ -48,7 +48,7 @@ from pydrake.systems.meshcat_visualizer import MeshcatVisualizer
 from pydrake.systems.primitives import FirstOrderLowPassFilter
 from pydrake.util.eigen_geometry import Isometry3
 
-from blender_server.drake_blender_visualizer.blender_visualizer import BlenderColorCamera
+from blender_server.drake_blender_visualizer.blender_visualizer import BlenderCamera
 
 
 def RegisterVisualAndCollisionGeometry(
@@ -113,18 +113,19 @@ if __name__ == "__main__":
         cam_trans_base = np.array([0.47, -0.54, 0.31])
         cam_tf_base = Isometry3(quaternion=cam_quat_base,
                                 translation=cam_trans_base)
-	# Rotate camera around origin
-	cam_additional_rotation = Isometry3(quaternion=RollPitchYaw(0., 0., np.random.uniform(0., np.pi*2.)).ToQuaternion(),
+        # Rotate camera around origin
+        cam_additional_rotation = Isometry3(quaternion=RollPitchYaw(0., 0., np.random.uniform(0., np.pi*2.)).ToQuaternion(),
                                             translation=[0, 0, 0])
         cam_tf_base = cam_additional_rotation.multiply(cam_tf_base)
         cam_tfs = [cam_tf_base]
 
         offset_quat_base = RollPitchYaw(0., 0., 0.).ToQuaternion().wxyz()
-	os.system("mkdir -p /tmp/ycb_scene_%03d" % scene_k)
-        blender_cam = builder.AddSystem(BlenderColorCamera(
+        os.system("mkdir -p /tmp/ycb_scene_%03d" % scene_k)
+        blender_cam = builder.AddSystem(BlenderCamera(
             scene_graph,
             draw_period=0.03333/2.,
             camera_tfs=cam_tfs,
+            env_map_path="/home/gizatt/tools/blender_server/data/env_maps/aerodynamics_workshop_4k.hdr",
             material_overrides=[
                 (".*ground.*",
                     {"material_type": "CC0_texture",
