@@ -15,11 +15,11 @@ import bpy
 from mathutils import Color, Euler, Matrix, Quaternion, Vector
 
 
-primitive_cls_list = (bool, int, float, str, type(None))
-repr_cls_list = (Color, Euler, Matrix, Quaternion, Vector)
-skip_fields = (
+_PRIMITIVE_CLS_LIST = (bool, int, float, str, type(None))
+_REPR_CLS_LIST = (Color, Euler, Matrix, Quaternion, Vector)
+_SKIP_FIELDS = (
     "bl_rna", "rna_type", "node", "internal_links", "keying_sets_all")
-skip_field_prefixes = ("_", "users_", "active_")
+_SKIP_FIELD_PREFIXES = ("_", "users_", "active_")
 
 
 def _reorder(fields):
@@ -87,30 +87,28 @@ def dump(
             add_debug_info=add_debug_info,
             depth=depth+1, relpath=relpath, path=path + relpath)
 
-    if isinstance(obj, np.ndarray) and obj.dtype != np.object:
+    if isinstance(obj, _PRIMITIVE_CLS_LIST):
+        return obj
+    elif isinstance(obj, np.ndarray) and obj.dtype != np.object:
         if obj.size >= max_elem:
             return f"<len >= {max_len}>"
         return obj.tolist()
-    elif isinstance(obj, primitive_cls_list):
-        return obj
+    elif isinstance(obj, Matrix):
+        return np.array(obj).tolist()
+    elif isinstance(obj, _REPR_CLS_LIST):
+        return repr(obj)
+    elif hasattr(obj, "__len__") and len(obj) > max_len:
+        return f"<len = {len(obj)} >= {max_len}>"
+    elif isinstance(obj, type) or hasattr(obj, "__call__"):
+        # Do not print out types or functions.
+        return _Ignore
+
     obj_id = _id_bpy(obj)
     if obj_id in memo:
         return f"<visited: {obj_id}>"
-    if hasattr(obj, "__len__") and len(obj) > max_len:
-        return f"<len = {len(obj)} >= {max_len}>"
     # Record raw object (just in case it's ID may get reused otherwise).
     memo[obj_id] = obj
-    # Do not print out types or functions.
-    if isinstance(obj, type) or hasattr(obj, "__call__"):
-        return _Ignore
-    # Use repr for certain cls.
-    if isinstance(obj, Matrix):
-        return np.array(obj).tolist()
-    if isinstance(obj, repr_cls_list):
-        return repr(obj)
-    is_bpy = (type(obj).__module__.startswith("bpy"))
-    is_dict = (hasattr(obj, "keys") and hasattr(obj, "values"))
-    if is_dict and not is_bpy:
+    if isinstance(obj, dict):
         items = obj.items()
         gen = ((recurse(k), recurse(v, _norm_str(f"[{repr(k)}]")))
                for k, v in items)
@@ -122,11 +120,12 @@ def dump(
         gen = _Ignore.filter_values(gen)
         return list(gen)
     else:
+        # Iterate through attributes.
         d = dict()
         for k in _reorder(dir(obj)):
             if not hasattr(obj, k):
                 continue
-            if k.startswith(skip_field_prefixes) or k in skip_fields:
+            if k.startswith(_SKIP_FIELD_PREFIXES) or k in _SKIP_FIELDS:
                 continue
             v = recurse(getattr(obj, k), _norm_str(f".{k}"))
             if v is _Ignore:
